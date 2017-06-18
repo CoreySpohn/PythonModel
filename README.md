@@ -5,7 +5,9 @@ A program that simulates crowd dynamics, particularly in a panic situation, usin
 
 Python 2.7
 	The Anaconda package is highly recomended as it comes with the Spyder IDE and many packages meant to handle large amounts of data.
+	
 	Download here: https://www.continuum.io/downloads
+	
 	Python is designed to be very readable, which is the main reason it was chosen.  The previous model was not documented well, so hopefully writing it in python will help future teams.
 	
 # NAMING CONVENTIONS
@@ -13,13 +15,13 @@ Python 2.7
 ## Variables - mixedCase
 	I think this is easily readable and looks better than underscores.
 	Example:
-		agentOnePosition = (19,30)
+		agentOnePosition = [19,30]
 		
 ## Functions - mixedCase
 	Same as above
 	Example:
 		def setAgentPosition(agentNumber):
-			agentNumberPosition = (19,30)
+			agentNumberPosition = [19,30]
 			
 ## Classes - CapWords
 	Makes it easy to tell that the method (a function that is defined in a class) being called comes from a class
@@ -30,14 +32,14 @@ For more https://www.python.org/dev/peps/pep-0008/
 ## Create agents
 	I think this should be done with an agent class
 	Assign it x/y coordinates
-		Preferably it will be in a 2 number list (called a double) 
+		Preferably it will be in a 2 number list
 			Example
-				agent1position = (5.44,8.32)
+				agentOnePosition = [5.44,8.32]
 			I think this would be more compact
 		Could also use two variables 
 			Example
-				agent1x=5.44
-       			agent1y=8.32
+				agentOneX=5.44
+       			agentOneY=8.32
 			This 
 		
 ## Process the forces
@@ -51,11 +53,11 @@ For more https://www.python.org/dev/peps/pep-0008/
 			
 	Forces will be doubles treated as vectors
 		Example:
-			agent1 acting on agent3 force = (-2.32,5.14)
+			agent1 acting on agent3 force = [-2.32,5.14]
 		
 	Agent-agent forces will be equal and opposite so assign the force to the other agent
 		Example:
-			agent3 acting on agent1 force = (2.32,-5.14)
+			agent3 acting on agent1 force = [2.32,-5.14]
 		
 	Sum all of the forces for the agent
 		The final force vector will define their movement direction
