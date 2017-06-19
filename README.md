@@ -62,6 +62,9 @@ Assign it x/y coordinates
 			agentOneY=8.32
 		
 ## Process the forces
+
+I'd like to use the Headed Social Force Model (HSFM) because it combines the Social Force Model with the Human Locomotion Model, ideally I'll be able to program all three and we can test them independently
+
 Forces
 
 	Agent-agent
