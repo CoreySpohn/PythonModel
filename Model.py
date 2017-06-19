@@ -7,10 +7,14 @@ class Agent:
     '''
     The class that defines the agents
     '''
+    numOfAgents = 0
+    
     def __init__(self, number, position, velocity):
         self.number = number
         self.position = position
         self.velocity = velocity
+        
+        Agent.numOfAgents += 1
     
     def xVals(self):
         xPos = 'x position: ' + str(self.position[0])
@@ -26,5 +30,7 @@ class Agent:
     
         
 agentOne = Agent(1, [1,1], [2,2])
+agentTwo = Agent(1, [1,1], [2,2])
 print agentOne.xVals()
 print agentOne.yVals()
+print Agent.numOfAgents

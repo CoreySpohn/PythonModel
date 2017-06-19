@@ -74,7 +74,7 @@ Forces
 	
 		This is what I'm calling the self-driven force
 		
-Forces will be doubles treated as vectors
+Forces will be lists treated as vectors
 
 	Example:
 	
