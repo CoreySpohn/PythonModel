@@ -52,12 +52,14 @@ class Agent:
         self.angle = math.radians(headingVector[0])
         self.angularVelocity = headingVector[1]
         self.goalPoint = goalPoint
-        self.force = 0
+        
+        self.newPosition = [0, 0]
+        self.newVelocity = [0, 0]
         
         self.momentOfInertia = 0.5 * self.mass * self.radius**2
         Agent.agentList.append(self)
         Agent.number += 1
-        
+    
 
 def agentToAgentDistance(agentI,agentJ):
     '''
@@ -154,7 +156,7 @@ def agentToObstacleDistance(agent, closestX, closestY):
 def agentToObstacleVector(agent, closestX, closestY):
     dist = agentToObstacleDistance(agent, closestX, closestY)
     if dist == 0:
-        return [0, 0]
+        return np.zeros(2)
     xVect = (agent.position[0]-closestX)/dist
     yVect = (agent.position[1]-closestY)/dist
     unitVect = [xVect, yVect]
@@ -172,6 +174,7 @@ A = 2*(10**3)       # Newtons
 B = 0.08            # Meters
 k1 = 1.2*(10**5)    # kg/(s**2)
 k2 = 2.4*(10**5)    # kg/(m*s)
+timeIncrement = 1   # Seconds
 
 ######################################################################
 #                       SOCIAL FORCE MODEL                           #
@@ -193,7 +196,7 @@ def agentToGoalForce(agent):
     goalVelY = goalVectY * goalSpeed / dist
     goalVelocity = [goalVelX, goalVelY]
     
-    timeIncrement = 1 # Seconds
+
     mass = agent.mass
     
     forceX = mass * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
@@ -216,16 +219,23 @@ def agentToAgentForce(agentI, agentJ):
     dist = agentToAgentDistance(agentI, agentJ)
     unitVect = np.array(agentToAgentVector(agentI, agentJ))
     perpUnitVect = np.array([-unitVect[1], unitVect[0]])
-    velDif = np.dot(np.array([agentJ.velocity[0] - agentI.velocity[0],
-                       agentJ.velocity[1] - agentI.velocity[1]]), perpUnitVect)
+    perpUnitVect.reshape(2, 1)
+    velDifArray = np.array([agentJ.velocity[0] - agentI.velocity[0],
+                       agentJ.velocity[1] - agentI.velocity[1]])
     
     repulsiveTerm = A * math.exp((radiusSum - dist)/B) * unitVect
     
     compressiveTerm = (k1 * max(radiusSum - dist, 0)) * unitVect
     
-    frictionTerm = (k2 * max(radiusSum - dist, 0)) * velDif * perpUnitVect
+    if velDifArray[0] == 0 and velDifArray[1] == 0:
+        frictionTerm = 0
+    else:
+        velDifArray.reshape(1,2)
+        velDif = perpUnitVect[0] * velDifArray[0] + perpUnitVect[1] * velDifArray[1]
+        frictionTerm = (k2 * max(radiusSum - dist, 0)) * velDif * perpUnitVect
 
     summedForce = repulsiveTerm + compressiveTerm + frictionTerm
+
     
     return np.array([[summedForce[0]],[summedForce[1]]])
 
@@ -314,14 +324,17 @@ def socialForceModel():
     # total force on an agent each time.  One thing that I'd like to add
     # is to use the equal and opposite force while going through the agents
     while currentAgent <= numOfAgents:
-        totalForce = 0
-        totalAgentForce = 0
-        totalObstacleForce = 0
+        goalForce = np.array([[0],[0]])
+        totalForce = np.array([[0],[0]])
+        totalAgentForce = np.array([[0],[0]])
+        totalObstacleForce = np.array([[0],[0]])
         otherAgent = 0
         obstacle = 0
         
+        # Since there is only one goal no loop is needed
         goalForce = agentToGoalForce(Agent.agentList[currentAgent])
         
+        # This loop finds the agent to agent forces
         while otherAgent <= numOfAgents:
             if otherAgent == currentAgent:
                 otherAgent += 1
@@ -329,19 +342,62 @@ def socialForceModel():
             else:
                 agentForce = agentToAgentForce(Agent.agentList[currentAgent],
                                                Agent.agentList[otherAgent])
-                totalAgentForce = totalAgentForce + agentForce
+                totalAgentForce = np.add(totalAgentForce, agentForce)
+                
                 otherAgent += 1
-            
+        
+        # This loop finds the agent to obstacle forces
         while obstacle <= numOfObstacles:    
             obstacleForce = agentToObstacleForce(Agent.agentList[currentAgent],
                                                  Obstacle.obstacleList[obstacle])
-            totalObstacleForce = totalObstacleForce + obstacleForce
+            totalObstacleForce = np.add(totalObstacleForce, obstacleForce)
             obstacle += 1
             
-        totalForce = goalForce + totalAgentForce + totalObstacleForce
-        Agent.agentList[currentAgent].force = totalForce
-        currentAgent += 1
+        # Calculate the sum of the forces and then update the agent's force vector
+        totalForce = np.add(np.add(goalForce, totalAgentForce), totalObstacleForce)
+#        totalForce = goalForce
+        acceleration = totalForce / Agent.agentList[currentAgent].mass
+
         
+        # Now that the agent has their forces we need to calculate their new
+        # velocity and corresponding position with simple kinematics
+        # v = v0 + a * t
+        # x = x0 + v0 * t + (a * t^2) / 2
+        # v0 = current velocity, a is found from the forces, and t is time
+        
+        newXVelocity = Agent.agentList[currentAgent].velocity[0] + acceleration[0] * timeIncrement
+        newXPosition = Agent.agentList[currentAgent].position[0] + Agent.agentList[currentAgent].velocity[0] * timeIncrement + acceleration[0] * timeIncrement**2 / 2.0
+        
+        newYVelocity = Agent.agentList[currentAgent].velocity[1] + acceleration[1] * timeIncrement
+        newYPosition = Agent.agentList[currentAgent].position[1] + Agent.agentList[currentAgent].velocity[1] * timeIncrement + acceleration[1] * timeIncrement**2 / 2.0
+        
+        Agent.agentList[currentAgent].newVelocity[0] = newXVelocity[0]
+        Agent.agentList[currentAgent].newVelocity[1] = newYVelocity[0]
+        
+        Agent.agentList[currentAgent].newPosition[0] = newXPosition[0]
+        Agent.agentList[currentAgent].newPosition[1] = newYPosition[0]
+        
+#        print 'Agent ' + str(currentAgent) + ' is at position: '
+#        print Agent.agentList[currentAgent].position
+#        print '\n'
+        
+        
+        currentAgent += 1
+    
+    # Now that all of the new positions and velocities have been calculated,
+    # update all of the agents
+    currentAgent = 0
+    while currentAgent <= numOfAgents:
+        Agent.agentList[currentAgent].velocity[0] = Agent.agentList[currentAgent].newVelocity[0]
+        Agent.agentList[currentAgent].velocity[1] = Agent.agentList[currentAgent].newVelocity[1]
+        
+        Agent.agentList[currentAgent].position[0] = Agent.agentList[currentAgent].newPosition[0]
+        Agent.agentList[currentAgent].position[1] = Agent.agentList[currentAgent].newPosition[1]
+        
+        currentAgent += 1
+    
+    socialForceModelPlot()
+
     return None
 
 def socialForceModelPlot():
@@ -375,7 +431,6 @@ def socialForceModelPlot():
         ax.add_artist(patches.Rectangle(xy=(Obstacle.obstacleList[currentObstacle].xMin, 
                            Obstacle.obstacleList[currentObstacle].yMin),
                 width=rWidth, height=rHeight))
-                
         
         currentObstacle += 1
         
@@ -450,9 +505,9 @@ def controlInputTheta(agent, goalForce):
     uTheta = -kTheta * (theta - goalTheta) - kOmega * omega
     return uTheta
 
-agentOne = Agent([1.5, 2.5], [.25,1], [45,1], [10, 10])
-agentTwo = Agent([2.5, 3], [1,1], [1,1], [10, 10])
-agentThree = Agent([2.2, 5], [1,1], [1,1], [10, 10])
+agentOne = Agent([0, 0], [0, 0], [1,1], [10, 15])
+agentTwo = Agent([1, 1], [0, 0], [1,1], [15, 10])
+agentThree = Agent([2, 2], [0, 0], [1,1], [10, 5])
 
 wallOne = Obstacle(3,0,5,7)
 bottomBoundary = Obstacle(-0.25, -0.25, 20, 0)
@@ -460,9 +515,8 @@ leftBoundary = Obstacle(-0.25, -0.25, 0, 20)
 topBoundary = Obstacle(0, 20, 20, 20.25)
 rightBoundary = Obstacle(20, 0, 20.25, 20)
 
-test = socialForceModel()
-socialForceModelPlot()
-#print agentOne.force
-#print agentTwo.force
-#print agentThree.force
 
+n = 0
+while n < 5:
+    socialForceModel()
+    n += 1
