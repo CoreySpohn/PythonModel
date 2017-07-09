@@ -306,6 +306,27 @@ def agentToObstacleForce(agent, obstacle):
     
     return np.array([[summedForce[0]],[summedForce[1]]])
 
+def collisionDetection(agent, obstacle):
+    '''
+    A function that is meant to determine whether an agent is inside of an obstacle
+    '''
+    # Get the position of the agent
+    xPosition = agent.position[0]
+    yPosition = agent.position[1]
+    
+    # Get the limits of the obstacle
+    xMin = obstacle.xMin
+    xMax = obstacle.xMax
+    yMin = obstacle.yMin
+    yMax = obstacle.yMax
+    
+    if xPosition >= xMin and xPosition <= xMax and yPosition >= yMin and yPosition <= yMax:
+        collision = True
+    else:
+        collision = False
+        
+    return collision
+
 def socialForceModel():
     '''
     This will run through all of the agents and calculate the total force on
@@ -385,14 +406,27 @@ def socialForceModel():
         currentAgent += 1
     
     # Now that all of the new positions and velocities have been calculated,
-    # update all of the agents
+    # update all of the agents position if they are not within an obstacle or
+    # another agent
     currentAgent = 0
     while currentAgent <= numOfAgents:
-        Agent.agentList[currentAgent].velocity[0] = Agent.agentList[currentAgent].newVelocity[0]
-        Agent.agentList[currentAgent].velocity[1] = Agent.agentList[currentAgent].newVelocity[1]
-        
-        Agent.agentList[currentAgent].position[0] = Agent.agentList[currentAgent].newPosition[0]
-        Agent.agentList[currentAgent].position[1] = Agent.agentList[currentAgent].newPosition[1]
+        obstacle = 0
+        collision = False
+        # This section is meant to determine whether the agent is within
+        # any of the obstacles. If so the variable collision is set to True
+        # and the position is not updated
+        while obstacle <= numOfObstacles:
+            collision = collisionDetection(Agent.agentList[currentAgent], Obstacle.obstacleList[obstacle])
+            if collision == True:
+                break
+            obstacle += 1
+            
+        if collision == False:
+            Agent.agentList[currentAgent].velocity[0] = Agent.agentList[currentAgent].newVelocity[0]
+            Agent.agentList[currentAgent].velocity[1] = Agent.agentList[currentAgent].newVelocity[1]
+            
+            Agent.agentList[currentAgent].position[0] = Agent.agentList[currentAgent].newPosition[0]
+            Agent.agentList[currentAgent].position[1] = Agent.agentList[currentAgent].newPosition[1]
         
         currentAgent += 1
     
@@ -505,18 +539,21 @@ def controlInputTheta(agent, goalForce):
     uTheta = -kTheta * (theta - goalTheta) - kOmega * omega
     return uTheta
 
-agentOne = Agent([0, 0], [0, 0], [1,1], [10, 15])
+agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [10, 15])
 agentTwo = Agent([1, 1], [0, 0], [1,1], [15, 10])
 agentThree = Agent([2, 2], [0, 0], [1,1], [10, 5])
 
-wallOne = Obstacle(3,0,5,7)
-bottomBoundary = Obstacle(-0.25, -0.25, 20, 0)
-leftBoundary = Obstacle(-0.25, -0.25, 0, 20)
-topBoundary = Obstacle(0, 20, 20, 20.25)
-rightBoundary = Obstacle(20, 0, 20.25, 20)
+wallOne = Obstacle(0,5,4,7)
+bottomBoundary = Obstacle(-10, -10, 20, 0)
+leftBoundary = Obstacle(-10, -10, 0, 20)
+topBoundary = Obstacle(0, 20, 20, 30)
+rightBoundary = Obstacle(20, 0, 30, 20)
+
+
 
 
 n = 0
-while n < 5:
+socialForceModelPlot()
+while n < 35:
     socialForceModel()
     n += 1
