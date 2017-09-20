@@ -23,6 +23,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.cm as cm
+import os.path
+scriptDir = os.path.dirname(__file__)
 
 ######################################################################
 #                                                                    #
@@ -174,7 +177,8 @@ A = 2*(10**3)       # Newtons
 B = 0.08            # Meters
 k1 = 1.2*(10**5)    # kg/(s**2)
 k2 = 2.4*(10**5)    # kg/(m*s)
-timeIncrement = 1   # Seconds
+timeIncrement = 0.1   # Seconds
+goalSpeed = 1.388   # This is the average speed of a human in meters/second
 
 ######################################################################
 #                       SOCIAL FORCE MODEL                           #
@@ -191,12 +195,9 @@ def agentToGoalForce(agent):
     goalVectX = agent.goalPoint[0] - agent.position[0]
     goalVectY = agent.goalPoint[1] - agent.position[1]
     dist = math.sqrt(goalVectX**2 + goalVectY**2)
-    goalSpeed = 1.388 # This is the average speed of a human in meters/second
     goalVelX = goalVectX * goalSpeed / dist
     goalVelY = goalVectY * goalSpeed / dist
     goalVelocity = [goalVelX, goalVelY]
-    
-
     mass = agent.mass
     
     forceX = mass * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
@@ -387,16 +388,47 @@ def socialForceModel():
         # v0 = current velocity, a is found from the forces, and t is time
         
         newXVelocity = Agent.agentList[currentAgent].velocity[0] + acceleration[0] * timeIncrement
-        newXPosition = Agent.agentList[currentAgent].position[0] + Agent.agentList[currentAgent].velocity[0] * timeIncrement + acceleration[0] * timeIncrement**2 / 2.0
-        
         newYVelocity = Agent.agentList[currentAgent].velocity[1] + acceleration[1] * timeIncrement
+        
+        
+        # Check to make sure that the new speed is below the goal speed
+        # if it is not then reassign the values to the goal values
+        totalVelocity = math.sqrt(newXVelocity[0]**2 + newYVelocity[0]**2)
+        if totalVelocity > goalSpeed:
+            # Normalize the values
+            goalXVelocity = newXVelocity[0] * goalSpeed / totalVelocity
+            goalYVelocity = newYVelocity[0] * goalSpeed / totalVelocity
+            
+            Agent.agentList[currentAgent].newVelocity[0] = goalXVelocity
+            Agent.agentList[currentAgent].newVelocity[1] = goalYVelocity
+            
+        else:
+            Agent.agentList[currentAgent].newVelocity[0] = newXVelocity[0]
+            Agent.agentList[currentAgent].newVelocity[1] = newYVelocity[0]
+        
+        
+        newXPosition = Agent.agentList[currentAgent].position[0] + Agent.agentList[currentAgent].velocity[0] * timeIncrement + acceleration[0] * timeIncrement**2 / 2.0
         newYPosition = Agent.agentList[currentAgent].position[1] + Agent.agentList[currentAgent].velocity[1] * timeIncrement + acceleration[1] * timeIncrement**2 / 2.0
         
-        Agent.agentList[currentAgent].newVelocity[0] = newXVelocity[0]
-        Agent.agentList[currentAgent].newVelocity[1] = newYVelocity[0]
         
-        Agent.agentList[currentAgent].newPosition[0] = newXPosition[0]
-        Agent.agentList[currentAgent].newPosition[1] = newYPosition[0]
+        # Check to make sure that the position change is not greater than the max velocity
+        # multiplied by the time interval
+        distanceTraveled = math.sqrt((newXPosition[0] - Agent.agentList[currentAgent].position[0])**2 + (newYPosition[0] - Agent.agentList[currentAgent].position[1])**2)
+        if distanceTraveled > goalSpeed * timeIncrement:
+            # Normalize the position to be the ratio
+            goalXDistance = (newXPosition - Agent.agentList[currentAgent].position[0]) * goalSpeed * timeIncrement / distanceTraveled
+            goalYDistance = (newYPosition - Agent.agentList[currentAgent].position[1]) * goalSpeed * timeIncrement / distanceTraveled
+            
+            newXPosition = Agent.agentList[currentAgent].position[0] + goalXDistance
+            newYPosition = Agent.agentList[currentAgent].position[1] + goalYDistance
+            
+            Agent.agentList[currentAgent].newPosition[0] = newXPosition[0]
+            Agent.agentList[currentAgent].newPosition[1] = newYPosition[0]
+            
+        else:
+            Agent.agentList[currentAgent].newPosition[0] = newXPosition[0]
+            Agent.agentList[currentAgent].newPosition[1] = newYPosition[0]
+
         
 #        print 'Agent ' + str(currentAgent) + ' is at position: '
 #        print Agent.agentList[currentAgent].position
@@ -414,7 +446,8 @@ def socialForceModel():
         collision = False
         # This section is meant to determine whether the agent is within
         # any of the obstacles. If so the variable collision is set to True
-        # and the position is not updated
+        # and the position is not updated.  I need to make the wall push the
+        # agent out of the obstacle though
         while obstacle <= numOfObstacles:
             collision = collisionDetection(Agent.agentList[currentAgent], Obstacle.obstacleList[obstacle])
             if collision == True:
@@ -456,7 +489,10 @@ def socialForceModelPlot():
         agentYPositions.append(Agent.agentList[currentAgent].position[1])
         currentAgent += 1
     
-    plt.scatter(agentXPositions, agentYPositions, color = 'r')
+    # Creates a list of colors that will be used to distinguish different agents
+    colors = cm.rainbow(np.linspace(0, 1, len(agentXPositions)))
+    
+    plt.scatter(agentXPositions, agentYPositions, color=colors)
     
     while currentObstacle <= numOfObstacles:
         rWidth = abs(Obstacle.obstacleList[currentObstacle].xMin - Obstacle.obstacleList[currentObstacle].xMax)
@@ -470,6 +506,25 @@ def socialForceModelPlot():
         
     plt.xlim(0, 20)
     plt.ylim(0, 20)
+    
+    # Save the images
+    if n < 10:
+        filename = 'Plots/' +'figure000' + str(n) + '.png'
+        filename = os.path.join(scriptDir, filename)
+        plt.savefig(filename, bbox_inches='tight')
+    elif n < 100:
+        filename = 'Plots/' +'figure00' + str(n) + '.png'
+        filename = os.path.join(scriptDir, filename)
+        plt.savefig(filename, bbox_inches='tight')
+    elif n < 1000:
+        filename = 'Plots/' +'figure0' + str(n) + '.png'
+        filename = os.path.join(scriptDir, filename)
+        plt.savefig(filename, bbox_inches='tight')    
+    else:
+        filename = 'Plots/' +'figure' + str(n) + '.png'
+        filename = os.path.join(scriptDir, filename)
+        plt.savefig(filename, bbox_inches='tight')
+        
     return None
 
 ######################################################################
@@ -539,21 +594,35 @@ def controlInputTheta(agent, goalForce):
     uTheta = -kTheta * (theta - goalTheta) - kOmega * omega
     return uTheta
 
-agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [10, 15])
-agentTwo = Agent([1, 1], [0, 0], [1,1], [15, 10])
-agentThree = Agent([2, 2], [0, 0], [1,1], [10, 5])
+agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [5, 15])
+agentTwo = Agent([1, 5], [0, 0], [1,1], [5, 13])
+agentThree = Agent([3, 3], [0, 0], [1,1], [5, 11])
+agentFour = Agent([5,5], [0,0], [-1,-1], [5, 9])
+agentFive = Agent([5,6], [0,0], [-1,-1], [5, 7])
+agentSix = Agent([15,6], [0,0], [-1,-1], [5, 5])
+agentSeven = Agent([5,16], [0,0], [-1,-1], [7, 10])
+agentEight = Agent([3,18], [0,0], [-1,-1], [9, 10])
+agentTen = Agent([0.5, 1], [0, 0], [1,1], [11, 15])
+agentEleven = Agent([1, 7], [0, 0], [1,1], [11, 13])
+agentThirteen = Agent([12, 3], [0, 0], [1,1], [11, 11])
+agentFourteen = Agent([13,5], [0,0], [-1,-1], [11, 9])
+agentFifteen = Agent([14,6], [0,0], [-1,-1], [11, 7])
+agentSixteen = Agent([15,9], [0,0], [-1,-1], [11, 5])
 
-wallOne = Obstacle(0,5,4,7)
+agentSeventeen = Agent([15,15], [0, 0], [0, 0], [15, 5])
+agentEightteen = Agent([15,17], [0, 0], [0, 0], [15, 7])
+agentNineteen = Agent([15,19], [0, 0], [0, 0], [15, 9])
+agentTwenty = Agent([13,19], [0, 0], [0, 0], [15, 11])
+agentTwentyOnene = Agent([15,3], [0, 0], [0, 0], [15, 15])
+
+#wallOne = Obstacle(0,5,4,7)
 bottomBoundary = Obstacle(-10, -10, 20, 0)
 leftBoundary = Obstacle(-10, -10, 0, 20)
 topBoundary = Obstacle(0, 20, 20, 30)
 rightBoundary = Obstacle(20, 0, 30, 20)
 
-
-
-
 n = 0
 socialForceModelPlot()
-while n < 35:
+while n < 150:
     socialForceModel()
     n += 1
