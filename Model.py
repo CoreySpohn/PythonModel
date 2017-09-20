@@ -202,8 +202,8 @@ def agentToGoalForce(agent):
     goalVelocity = [goalVelX, goalVelY]
     mass = agent.mass
     
-    forceX = mass * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
-    forceY = mass * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
+    forceX = mass * 0.5 * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
+    forceY = mass * 0.5 * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
     
     forceVect = np.array([[forceX], [forceY]])
     return forceVect
