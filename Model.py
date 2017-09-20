@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.cm as cm
 import os.path
+import ffmpy
+
 scriptDir = os.path.dirname(__file__)
 
 ######################################################################
@@ -177,7 +179,7 @@ A = 2*(10**3)       # Newtons
 B = 0.08            # Meters
 k1 = 1.2*(10**5)    # kg/(s**2)
 k2 = 2.4*(10**5)    # kg/(m*s)
-timeIncrement = 0.1   # Seconds
+timeIncrement = 0.01   # Seconds
 goalSpeed = 1.388   # This is the average speed of a human in meters/second
 
 ######################################################################
@@ -524,6 +526,7 @@ def socialForceModelPlot():
         filename = 'Plots/' +'figure' + str(n) + '.png'
         filename = os.path.join(scriptDir, filename)
         plt.savefig(filename, bbox_inches='tight')
+
         
     return None
 
@@ -622,7 +625,16 @@ topBoundary = Obstacle(0, 20, 20, 30)
 rightBoundary = Obstacle(20, 0, 30, 20)
 
 n = 0
+endValue = 2000
 socialForceModelPlot()
-while n < 150:
+while n < endValue:
     socialForceModel()
     n += 1
+    
+picLocation = 'Plots/figure%04d.png'
+picLocation = os.path.join(scriptDir, picLocation)
+movieLocation = os.path.join(scriptDir, 'Video/Result.mp4')
+ff = ffmpy.FFmpeg(
+        inputs={picLocation: None},
+        outputs={'output.mp4':['-r 24 -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p']})
+ff.cmd
