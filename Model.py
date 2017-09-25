@@ -202,8 +202,8 @@ def agentToGoalForce(agent):
     goalVelocity = [goalVelX, goalVelY]
     mass = agent.mass
     
-    forceX = mass * 0.5 * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
-    forceY = mass * 0.5 * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
+    forceX = mass * 0.1 * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
+    forceY = mass * 0.1 * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
     
     forceVect = np.array([[forceX], [forceY]])
     return forceVect
@@ -379,15 +379,13 @@ def socialForceModel():
             
         # Calculate the sum of the forces and then update the agent's force vector
         totalForce = np.add(np.add(goalForce, totalAgentForce), totalObstacleForce)
-#        totalForce = goalForce
         acceleration = totalForce / Agent.agentList[currentAgent].mass
-
         
         # Now that the agent has their forces we need to calculate their new
         # velocity and corresponding position with simple kinematics
         # v = v0 + a * t
         # x = x0 + v0 * t + (a * t^2) / 2
-        # v0 = current velocity, a is found from the forces, and t is time
+        # v0 = current velocity, a is found from the forces/mass, and t is time
         
         newXVelocity = Agent.agentList[currentAgent].velocity[0] + acceleration[0] * timeIncrement
         newYVelocity = Agent.agentList[currentAgent].velocity[1] + acceleration[1] * timeIncrement
@@ -481,7 +479,7 @@ def socialForceModelPlot():
     currentAgent = 0
     currentObstacle = 0
     
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, aspect='equal')
     
     # Create dots for each of the agents by getting all of their x and y
@@ -513,19 +511,23 @@ def socialForceModelPlot():
     if n < 10:
         filename = 'Plots/' +'figure000' + str(n) + '.png'
         filename = os.path.join(scriptDir, filename)
-        plt.savefig(filename, bbox_inches='tight')
+#        plt.savefig(filename, bbox_inches='tight')
+        plt.savefig(filename)
     elif n < 100:
         filename = 'Plots/' +'figure00' + str(n) + '.png'
         filename = os.path.join(scriptDir, filename)
-        plt.savefig(filename, bbox_inches='tight')
+#        plt.savefig(filename, bbox_inches='tight')
+        plt.savefig(filename)
     elif n < 1000:
         filename = 'Plots/' +'figure0' + str(n) + '.png'
         filename = os.path.join(scriptDir, filename)
-        plt.savefig(filename, bbox_inches='tight')    
+#        plt.savefig(filename, bbox_inches='tight')  
+        plt.savefig(filename)
     else:
         filename = 'Plots/' +'figure' + str(n) + '.png'
         filename = os.path.join(scriptDir, filename)
-        plt.savefig(filename, bbox_inches='tight')
+#        plt.savefig(filename, bbox_inches='tight')
+        plt.savefig(filename)
 
         
     return None
@@ -616,21 +618,23 @@ agentSeventeen = Agent([15,15], [0, 0], [0, 0], [15, 5])
 agentEightteen = Agent([15,17], [0, 0], [0, 0], [15, 7])
 agentNineteen = Agent([15,19], [0, 0], [0, 0], [15, 9])
 agentTwenty = Agent([13,19], [0, 0], [0, 0], [15, 11])
-agentTwentyOnene = Agent([15,3], [0, 0], [0, 0], [15, 15])
+agentTwentyOne = Agent([15,3], [0, 0], [0, 0], [15, 15])
 
-#wallOne = Obstacle(0,5,4,7)
+wallOne = Obstacle(5,7.5,10,10)
+
 bottomBoundary = Obstacle(-10, -10, 20, 0)
 leftBoundary = Obstacle(-10, -10, 0, 20)
 topBoundary = Obstacle(0, 20, 20, 30)
 rightBoundary = Obstacle(20, 0, 30, 20)
 
 n = 0
-endValue = 2000
+endValue = 1500
 socialForceModelPlot()
 while n < endValue:
     socialForceModel()
     n += 1
     
+# This is an attempt to use the figures to make a video, it's still in progress
 picLocation = 'Plots/figure%04d.png'
 picLocation = os.path.join(scriptDir, picLocation)
 movieLocation = os.path.join(scriptDir, 'Video/Result.mp4')
