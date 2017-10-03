@@ -599,28 +599,30 @@ def controlInputTheta(agent, goalForce):
     uTheta = -kTheta * (theta - goalTheta) - kOmega * omega
     return uTheta
 
-agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [5, 15])
-agentTwo = Agent([1, 5], [0, 0], [1,1], [5, 13])
-agentThree = Agent([3, 3], [0, 0], [1,1], [5, 11])
-agentFour = Agent([5,5], [0,0], [-1,-1], [5, 9])
+agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [1, 15])
+agentTwo = Agent([1, 5], [0, 0], [1,1], [2, 13])
+agentThree = Agent([3, 3], [0, 0], [1,1], [3, 11])
+agentFour = Agent([5,5], [0,0], [-1,-1], [4, 9])
 agentFive = Agent([5,6], [0,0], [-1,-1], [5, 7])
-agentSix = Agent([15,6], [0,0], [-1,-1], [5, 5])
-agentSeven = Agent([5,16], [0,0], [-1,-1], [7, 10])
-agentEight = Agent([3,18], [0,0], [-1,-1], [9, 10])
-agentTen = Agent([0.5, 1], [0, 0], [1,1], [11, 15])
-agentEleven = Agent([1, 7], [0, 0], [1,1], [11, 13])
-agentThirteen = Agent([12, 3], [0, 0], [1,1], [11, 11])
-agentFourteen = Agent([13,5], [0,0], [-1,-1], [11, 9])
-agentFifteen = Agent([14,6], [0,0], [-1,-1], [11, 7])
-agentSixteen = Agent([15,9], [0,0], [-1,-1], [11, 5])
+agentSix = Agent([15,6], [0,0], [-1,-1], [6, 9])
+agentSeven = Agent([5,16], [0,0], [-1,-1], [7, 11])
+agentEight = Agent([3,18], [0,0], [-1,-1], [8, 13])
+agentTen = Agent([0.5, 1], [0, 0], [1,1], [9, 15])
+agentEleven = Agent([1, 7], [0, 0], [1,1], [11, 15])
+agentThirteen = Agent([12, 3], [0, 0], [1,1], [13, 15])
+agentFourteen = Agent([13,5], [0,0], [-1,-1], [15, 15])
+agentFifteen = Agent([14,6], [0,0], [-1,-1], [17, 15])
+agentSixteen = Agent([15,10], [0,0], [-1,-1], [19, 15])
+#agentSeventeen = Agent([15,15], [0, 0], [0, 0], [17, 15])
+#agentEightteen = Agent([15,17], [0, 0], [0, 0], [18, 15])
+agentNineteen = Agent([15,19], [0, 0], [0, 0], [14, 13])
+agentTwenty = Agent([13,19], [0, 0], [0, 0], [13, 11])
+agentTwentyOne = Agent([15,3], [0, 0], [0, 0], [12, 9])
+agentTwentyTwo = Agent([1,19], [0, 0], [0, 0], [11, 7])
+#agentTwentyTwo = Agent([1,13], [0, 0], [0, 0], [10, 7])
 
-agentSeventeen = Agent([15,15], [0, 0], [0, 0], [15, 5])
-agentEightteen = Agent([15,17], [0, 0], [0, 0], [15, 7])
-agentNineteen = Agent([15,19], [0, 0], [0, 0], [15, 9])
-agentTwenty = Agent([13,19], [0, 0], [0, 0], [15, 11])
-agentTwentyOne = Agent([15,3], [0, 0], [0, 0], [15, 15])
-
-wallOne = Obstacle(5,7.5,10,10)
+#wallOne = Obstacle(4,10,6,13)
+#wallTwo = Obstacle(15,8,17.5,9)
 
 bottomBoundary = Obstacle(-10, -10, 20, 0)
 leftBoundary = Obstacle(-10, -10, 0, 20)
@@ -628,12 +630,15 @@ topBoundary = Obstacle(0, 20, 20, 30)
 rightBoundary = Obstacle(20, 0, 30, 20)
 
 n = 0
-endValue = 1500
+endValue = 1615
 socialForceModelPlot()
 while n < endValue:
     socialForceModel()
+    percent = float(n)/endValue * 100
+    print str(round(percent, 2)) + '% complete'
     n += 1
-    
+
+print '100.00% complete'
 # This is an attempt to use the figures to make a video, it's still in progress
 picLocation = 'Plots/figure%04d.png'
 picLocation = os.path.join(scriptDir, picLocation)
