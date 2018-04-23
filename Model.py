@@ -88,6 +88,65 @@ def agentToAgentVector(agentI, agentJ):
     unitVect = [xVect, yVect]
     return unitVect
     
+######################################################################
+#                                                                    #
+#                             AGENTS                                 #
+#                                                                    #
+######################################################################
+
+class Robot:
+    '''
+    The class that defines the robots
+    
+    Things to add
+        Initial position, orientation angle, and velocity
+        Variable radius and mass
+        
+    '''
+    robotList = []
+    number = 0
+    radius = 0.25
+    mass = 60
+    
+    def __init__(self, position, velocity, headingVector, goalPoint):
+        self.number = Agent.number
+        self.position = position
+        self.velocity = velocity
+        self.headingVector = headingVector
+        self.angle = math.radians(headingVector[0])
+        self.angularVelocity = headingVector[1]
+        self.goalPoint = goalPoint
+        
+        self.newPosition = [0, 0]
+        self.newVelocity = [0, 0]
+        
+        self.momentOfInertia = 0.5 * self.mass * self.radius**2
+        Robot.robotList.append(self)
+        Robot.number += 1
+    
+
+def agentToRobotDistance(agent,robot):
+    '''
+    This function is meant to calculate the total distance between two
+    different agents.
+    '''
+    xDif = abs(agent.position[0] - robot.position[0])
+    yDif = abs(agent.position[1] - robot.position[1])
+    totDif = math.sqrt(xDif**2 + yDif**2)
+    return totDif
+
+def agentToRobotVector(agent, robot):
+    '''
+    This function calculates the unit vector pointing from agent i to agent j
+    '''
+    dist = agentToAgentDistance(agent, robot)
+    if dist == 0:
+        return 0
+    xVect = (agent.position[0]-robot.position[0])/dist
+    yVect = (agent.position[1]-robot.position[1])/dist
+    unitVect = [xVect, yVect]
+    return unitVect
+
 
 ######################################################################
 #                                                                    #
@@ -181,6 +240,7 @@ k1 = 1.2*(10**5)    # kg/(s**2)
 k2 = 2.4*(10**5)    # kg/(m*s)
 timeIncrement = 0.01   # Seconds
 goalSpeed = 1.388   # This is the average speed of a human in meters/second
+c = 0.02            # This is a constant that determines the strength of the goal force
 
 ######################################################################
 #                       SOCIAL FORCE MODEL                           #
@@ -202,8 +262,8 @@ def agentToGoalForce(agent):
     goalVelocity = [goalVelX, goalVelY]
     mass = agent.mass
     
-    forceX = mass * 0.1 * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
-    forceY = mass * 0.1 * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
+    forceX = mass * c * (goalVelocity[0] - agent.velocity[0]) / timeIncrement
+    forceY = mass * c * (goalVelocity[1] - agent.velocity[1]) / timeIncrement
     
     forceVect = np.array([[forceX], [forceY]])
     return forceVect
@@ -225,6 +285,34 @@ def agentToAgentForce(agentI, agentJ):
     perpUnitVect.reshape(2, 1)
     velDifArray = np.array([agentJ.velocity[0] - agentI.velocity[0],
                        agentJ.velocity[1] - agentI.velocity[1]])
+    
+    repulsiveTerm = A * math.exp((radiusSum - dist)/B) * unitVect
+    
+    compressiveTerm = (k1 * max(radiusSum - dist, 0)) * unitVect
+    
+    if velDifArray[0] == 0 and velDifArray[1] == 0:
+        frictionTerm = 0
+    else:
+        velDifArray.reshape(1,2)
+        velDif = perpUnitVect[0] * velDifArray[0] + perpUnitVect[1] * velDifArray[1]
+        frictionTerm = (k2 * max(radiusSum - dist, 0)) * velDif * perpUnitVect
+
+    summedForce = repulsiveTerm + compressiveTerm + frictionTerm
+
+    
+    return np.array([[summedForce[0]],[summedForce[1]]])
+
+def agentToRobotForce(agent, robot):
+    '''
+    This function calculates the repulsive force of robot on agent
+    '''
+    radiusSum = agent.radius + robot.radius
+    dist = agentToAgentDistance(agent, robot)
+    unitVect = np.array(agentToRobotVector(agent, robot))
+    perpUnitVect = np.array([-unitVect[1], unitVect[0]])
+    perpUnitVect.reshape(2, 1)
+    velDifArray = np.array([robot.velocity[0] - agent.velocity[0],
+                       robot.velocity[1] - agent.velocity[1]])
     
     repulsiveTerm = A * math.exp((radiusSum - dist)/B) * unitVect
     
@@ -337,10 +425,12 @@ def socialForceModel():
     '''
     # Subtract one since the index starts from zero
     numOfAgents = Agent.number - 1
-    numOfObstacles = Obstacle.number - 1
+    numOfRobots = Robot.number - 1
+    numOfObstacles = Obstacle.number - 1    
     # These variables are what the loop runs through while calculating forces
     currentAgent = 0
     otherAgent = 1
+    currentRobot = 0
     obstacle = 0
     totalForce = 0
     
@@ -351,8 +441,10 @@ def socialForceModel():
         goalForce = np.array([[0],[0]])
         totalForce = np.array([[0],[0]])
         totalAgentForce = np.array([[0],[0]])
+        totalRobotForce = np.array([[0],[0]])
         totalObstacleForce = np.array([[0],[0]])
         otherAgent = 0
+        currentRobot = 0
         obstacle = 0
         
         # Since there is only one goal no loop is needed
@@ -370,6 +462,16 @@ def socialForceModel():
                 
                 otherAgent += 1
         
+        # This loop is used to find the agent to robot forces
+        while currentRobot <= numOfRobots:
+            robotForce = agentToRobotForce(Agent.agentList[currentAgent],
+                                           Robot.robotList[currentRobot])
+            totalRobotForce = np.add(totalRobotForce, robotForce)
+            
+            currentRobot += 1
+            
+        
+        
         # This loop finds the agent to obstacle forces
         while obstacle <= numOfObstacles:    
             obstacleForce = agentToObstacleForce(Agent.agentList[currentAgent],
@@ -379,6 +481,10 @@ def socialForceModel():
             
         # Calculate the sum of the forces and then update the agent's force vector
         totalForce = np.add(np.add(goalForce, totalAgentForce), totalObstacleForce)
+        totalForce = goalForce + totalAgentForce + totalRobotForce
+        if currentAgent == 0:
+            print totalRobotForce
+            print totalForce
         acceleration = totalForce / Agent.agentList[currentAgent].mass
         
         # Now that the agent has their forces we need to calculate their new
@@ -437,6 +543,18 @@ def socialForceModel():
         
         currentAgent += 1
     
+    # Now move all of the robots
+    currentRobot = 0
+    while currentRobot <= numOfRobots:
+        # This is just a simple linear relation, in this scenario the robots move
+        # independent of the humans
+        xDir = Robot.robotList[currentRobot].goalPoint[0]-Robot.robotList[currentRobot].position[0]
+        yDir = Robot.robotList[currentRobot].goalPoint[1]-Robot.robotList[currentRobot].position[1]
+        unitVect = np.array([xDir, yDir])/math.sqrt(xDir**2+yDir**2)
+        Robot.robotList[currentRobot].velocity = unitVect * goalSpeed
+        Robot.robotList[currentRobot].position = Robot.robotList[currentRobot].position + Robot.robotList[currentRobot].velocity * timeIncrement
+        currentRobot += 1
+    
     # Now that all of the new positions and velocities have been calculated,
     # update all of the agents position if they are not within an obstacle or
     # another agent
@@ -473,10 +591,14 @@ def socialForceModelPlot():
     '''
      # Subtract one since the index starts from zero
     numOfAgents = Agent.number - 1
+    numOfRobots = Robot.number - 1
     numOfObstacles = Obstacle.number - 1
     agentXPositions = []
     agentYPositions = []
+    robotXPositions = []
+    robotYPositions = []
     currentAgent = 0
+    currentRobot = 0
     currentObstacle = 0
     
     fig = plt.figure(figsize=(8,8))
@@ -489,10 +611,18 @@ def socialForceModelPlot():
         agentYPositions.append(Agent.agentList[currentAgent].position[1])
         currentAgent += 1
     
+    
     # Creates a list of colors that will be used to distinguish different agents
     colors = cm.rainbow(np.linspace(0, 1, len(agentXPositions)))
     
     plt.scatter(agentXPositions, agentYPositions, color=colors)
+    
+    while currentRobot <= numOfRobots:
+        robotXPositions.append(Robot.robotList[currentRobot].position[0])
+        robotYPositions.append(Robot.robotList[currentRobot].position[1])
+        currentRobot += 1
+        
+    plt.scatter(robotXPositions, robotYPositions, color='pink')
     
     while currentObstacle <= numOfObstacles:
         rWidth = abs(Obstacle.obstacleList[currentObstacle].xMin - Obstacle.obstacleList[currentObstacle].xMax)
@@ -599,7 +729,7 @@ def controlInputTheta(agent, goalForce):
     uTheta = -kTheta * (theta - goalTheta) - kOmega * omega
     return uTheta
 
-agentOne = Agent([0.5, 0.5], [0, 0], [1,1], [1, 15])
+agentOne = Agent([15, 3], [0, 0], [1,1], [1, 15])
 agentTwo = Agent([1, 5], [0, 0], [1,1], [2, 13])
 agentThree = Agent([3, 3], [0, 0], [1,1], [3, 11])
 agentFour = Agent([5,5], [0,0], [-1,-1], [4, 9])
@@ -617,12 +747,16 @@ agentSixteen = Agent([15,10], [0,0], [-1,-1], [19, 15])
 #agentEightteen = Agent([15,17], [0, 0], [0, 0], [18, 15])
 agentNineteen = Agent([15,19], [0, 0], [0, 0], [14, 13])
 agentTwenty = Agent([13,19], [0, 0], [0, 0], [13, 11])
-agentTwentyOne = Agent([15,3], [0, 0], [0, 0], [12, 9])
+agentTwentyOne = Agent([0.5, 0.5], [0, 0], [0, 0], [12, 9])
 agentTwentyTwo = Agent([1,19], [0, 0], [0, 0], [11, 7])
 #agentTwentyTwo = Agent([1,13], [0, 0], [0, 0], [10, 7])
 
 #wallOne = Obstacle(4,10,6,13)
 #wallTwo = Obstacle(15,8,17.5,9)
+
+robotOne = Robot([14.5, 3], [0, 0], [1,1], [3, 17])
+robotTwo = Robot([15, 2.5], [0, 0], [1,1], [15, 15])
+robotThree = Robot([15, 3.5], [0, 0], [1,1], [10, 1])
 
 bottomBoundary = Obstacle(-10, -10, 20, 0)
 leftBoundary = Obstacle(-10, -10, 0, 20)
@@ -630,7 +764,7 @@ topBoundary = Obstacle(0, 20, 20, 30)
 rightBoundary = Obstacle(20, 0, 30, 20)
 
 n = 0
-endValue = 1615
+endValue = 1000
 socialForceModelPlot()
 while n < endValue:
     socialForceModel()
